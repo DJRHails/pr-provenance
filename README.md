@@ -44,7 +44,85 @@ Join key throughout: **(`day`, `line`)** — the day file and 0-based line numbe
 
 ## Results
 
-<!-- RESULTS -->
+All numbers below reproduce from `PYTHONPATH=. python scripts/summarize.py` over the committed
+labels; the figure from `scripts/fig_provenance.py`.
+
+![Weekly provenance shares](figures/fig_provenance.png)
+
+### Who signs their work
+
+Of 603,953 raw descriptions, **126,124 (20.9%) carry an explicit coding-agent signature**:
+Claude Code 51,060 · Codex 43,597 · Copilot 16,690 · Jules 9,617 · Cursor 2,472 · Devin 1,829 ·
+others <300 each. In the kept (clustered) corpus the signed share grows 0.1% (2025-Q1) → 36.5%
+(2026-Q2). Two histories inside that: **Codex signatures peak in 2025-Q3 (18.7%) and collapse to
+1% by 2026-Q3**, while Claude Code grows monotonically to 27.3% — though footer conventions are
+themselves product decisions, so a vanishing signature is evidence about the footer, not
+necessarily about usage.
+
+**Which model?** Signatures rarely say. 50,645 of 51,060 Claude Code trailers read bare
+`Co-Authored-By: Claude`; the 955 versioned trailers across all rows name `claude-opus-4-8`
+(203), `claude-sonnet-5` (144), `claude-opus-4-6` (127), `claude-opus-5` (112),
+`claude-opus-4-7` (105), `claude-fable-5` (93), and six others. Codex/Copilot/Devin footers
+never name a model. So model attribution beyond the agent is only possible for ~0.2% of rows
+from signatures alone — the honest answer to "which model generated this?" is usually "which
+agent", plus the cluster/style evidence below.
+
+### The clusters are agent house styles
+
+Cross-tabbing cluster × signature (kept corpus): **the upstream page's arriving component is
+Claude-specific** — 37.2% of Claude-Code-signed docs land in it against **0.03% of
+Codex-signed** (13 of 39,469); Codex dominates a different component (the one whose top word is
+the `chatgpt.com` task-link domain). A TF-IDF logistic classifier over signed docs — signatures
+and URLs stripped, train/validation split by author — separates claude-code / codex / cursor /
+jules prose at **98.3% accuracy** (macro-F1 0.978), so the "ways of writing" the unsupervised
+fit found really are agent styles, recoverable from prose alone.
+
+### isogram: human vs non-human
+
+The stratified sample (250 docs/week, n=21,500) scored with the shipped isogram text detector
+(Qwen3.5-9B QLoRA, EditLens-style regression + binary head, val-fit threshold):
+
+| | n | flagged AI |
+|---|---|---|
+| signed by any agent | 4,494 | **94.1%** |
+| — Claude Code | 2,229 | 99.2% |
+| — Codex | 1,847 | 89.7% |
+| — Jules | 281 | 98.2% |
+| — Cursor | 88 | 44.3% |
+| unsigned | 17,006 | 46.0% |
+| unsigned, in the lead cluster | 859 | 89.5% |
+| unsigned, other clusters | 16,147 | 43.6% |
+
+The signatures validate the detector in the wild (it never saw PR text in training): 99.2% of
+Claude-Code-signed descriptions are flagged. The Cursor exception is informative — Cursor-agent
+PR bodies often carry the human's own task prompt inside the agent's wrapper, and the detector
+reads them as human (mean score 0.05).
+
+**The weekly AI-touched share rises 23.4% (2025-Q1) → 90.2% (2026-Q3).** The 2025-Q1 level is
+the honest baseline uncertainty: some is pre-agent LLM copy-paste, some is false positives on
+an out-of-distribution register (templated, checklist-heavy, non-English PR prose). The
+*trend* — +67pp while signatures explain only +33pp — is the finding: **the detector sees
+roughly one unsigned AI description for every signed one.** Unsigned-only flag rates:
+23.3% → 87.6% by quarter.
+
+### The unsigned AI: mostly Claude-styled
+
+Unsigned docs the detector flags, attributed by the style classifier: **72.4% claude-code
+style** (87.1% among high-confidence predictions), 19% jules, 8.3% codex, 0.4% cursor. Read
+with care: the classifier has no "human" class (isogram supplies that side), early-2025
+attributions predate some agents' existence (the 2025 "jules"-styled rows are really
+"short-template-styled"), and agents can run each other's models — this attributes house style,
+not checkpoint. From 2026 onward, where both the detector and the classifier are on home turf,
+the unsigned-flagged population is ~80% Claude-Code-styled — consistent with the upstream
+page's finding that the arriving vocabulary is Claude's, and with Claude Code footers being
+easy to strip or disable.
+
+**Caveats, so the numbers are not over-read.** One detector (one seed) at one operating point;
+PR descriptions are OOD for it; the sample is 250/week (weekly Wilson 95% CIs shown in the
+figure); signature mining is conservative by design (mentions of a tool in prose don't count);
+`bot_author` rows are excluded from the clustered corpus upstream, so Copilot (which authors
+under the `copilot` login) is mostly invisible in kept-corpus numbers while very visible in the
+raw corpus.
 
 ## Provenance & licensing
 
