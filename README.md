@@ -42,6 +42,7 @@ words — vocabulary distinctive of Claude.
 | `labels/stylometric.parquet` | unsigned kept documents: predicted agent + confidence (bag-of-words over prose with signatures and URLs stripped) |
 | `labels/isogram_full.parquet` | detector verdicts for **every** kept document (467,387 rows: `iso_label`, `iso_ai_touched`, `iso_score`, `iso_ai_prob`, …) |
 | `labels/isogram_sample.parquet` / `labels/isogram_scores.parquet` | stratified 250/week sample (21,500 docs) and its verdicts — the figure's CI-bearing estimate |
+| `labels/embedding_attribution.parquet` | unsigned detector-flagged rows: calibrated family posteriors from the detector's own embedding (`family_pred`, `family_conf`, per-class `p_*`) |
 | `scripts/` | everything above is one script each; all run from a clean checkout (`PYTHONPATH=. python scripts/<x>.py`) |
 
 Join key throughout: **(`day`, `line`)** — the day file and 0-based line number in it.
@@ -141,6 +142,31 @@ not checkpoint. From 2026 onward, where both the detector and the classifier are
 the unsigned-flagged population is ~80% Claude-Code-styled — consistent with the upstream
 page's finding that the arriving vocabulary is Claude's, and with Claude Code footers being
 easy to strip or disable.
+
+### Family and model identification from the detector's own embedding
+
+The stylometric TF-IDF probe reads surface n-grams; the stronger instrument is isogram itself.
+`labels/embed_input.parquet` (signed rows + per-week samples of unsigned flagged/clean rows,
+signatures and URLs stripped) is embedded with the detector's pooled representation (isogram
+`scripts/embed_pr_corpus.py`, 153,765 docs × 4096 dims), and `scripts/attribute_embedding.py`
+fits calibrated probes on it:
+
+- **Family probe** (claude-code / codex / jules / cursor, author-disjoint validation,
+  isotonic-calibrated): **99.3% accuracy**, macro-F1 0.973 — above the TF-IDF probe's 98.3%,
+  and the calibration holds (stated 0.997 → realized 0.997; the sub-0.8-confidence bucket is
+  under 2% of rows).
+- **Model-specific probe** — within Claude-signed rows whose trailer names a version (n=922,
+  9 versions ≥30 rows, grouped 5-fold CV by author): **51.4% accuracy against a 22.0%
+  majority baseline** (macro-F1 0.467; best-separated: `claude-opus-5` F1 0.69,
+  `claude-sonnet-5` 0.62). So the detector's representation carries real model-*version*
+  signal, not just family — though version labels correlate with release windows and Claude
+  Code scaffold versions, so some of this is time-of-writing style rather than checkpoint
+  identity; the versions do overlap in time (see the board's timeline), which bounds that
+  confound without removing it. Per-document version labels at 51% accuracy are too noisy to
+  publish; the family posteriors are published in `labels/embedding_attribution.parquet`.
+- **Unsigned flagged rows, calibrated family posteriors**: **83.8% claude-code**
+  (88.0% among confidence >0.8), 10.4% codex, 5.4% jules, 0.4% cursor — the embedding
+  attributes the unsigned AI mass to Claude even more strongly than the n-gram probe (72.4%).
 
 **Caveats, so the numbers are not over-read.** One detector (one seed) at one operating point;
 PR descriptions are OOD for it; the sample is 250/week (weekly Wilson 95% CIs shown in the

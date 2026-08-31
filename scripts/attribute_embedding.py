@@ -52,9 +52,11 @@ def main():
     h = pd.util.hash_array(fam["author"].to_numpy(dtype=object)) % 100
     tr, cal, va = (h >= 30), (h >= 15) & (h < 30), (h < 15)
     Xf = scaler.fit_transform(X[fam.index])
-    base = LogisticRegression(max_iter=3000, C=1.0, n_jobs=-1)
+    from sklearn.frozen import FrozenEstimator
+
+    base = LogisticRegression(max_iter=3000, C=1.0)
     base.fit(Xf[tr], fam["agent"][tr])
-    clf = CalibratedClassifierCV(base, method="isotonic", cv="prefit")
+    clf = CalibratedClassifierCV(FrozenEstimator(base), method="isotonic")
     clf.fit(Xf[cal], fam["agent"][cal])
     print("== family probe (embedding, author-disjoint validation) ==")
     print(classification_report(fam["agent"][va], clf.predict(Xf[va]), digits=3))
@@ -79,7 +81,7 @@ def main():
     Xv = scaler.transform(X[ver.index])
     groups = ver["author"].where(ver["author"] != "", ver["day"])
     pred = cross_val_predict(
-        LogisticRegression(max_iter=3000, C=1.0, n_jobs=-1),
+        LogisticRegression(max_iter=3000, C=1.0),
         Xv,
         ver["model"],
         groups=groups,
