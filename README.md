@@ -5,6 +5,9 @@ per-document provenance labels: the *way of writing* it clusters into, the *codi
 signed it, the *model* where the signature names one, and an *AI-text-detector score* from
 [isogram](https://github.com/DJRHails/isogram) (private repo; an EditLens replication).
 
+**Live board: [djrhails.github.io/pr-provenance](https://djrhails.github.io/pr-provenance/)** —
+weekly provenance composition + the named-Claude-version timeline, rebuilt by the weekly CI job.
+
 Bootstrapped from **[louisabraham/load-bearing](https://github.com/louisabraham/load-bearing)**
 (MIT) — the corpus behind *[The load-bearing vocabulary of
 Claude](https://louisabraham.github.io/load-bearing/)* — whose methodology this repo first
