@@ -41,7 +41,9 @@ def main():
             for lineno, raw in enumerate(fh):
                 if lineno in lines:
                     texts[(day, lineno)] = json.loads(raw)["body"]
-    sample["text"] = [texts[(d, int(li))] for d, li in zip(sample["day"], sample["line"])]
+    sample["text"] = [
+        texts[(d, int(li))] for d, li in zip(sample["day"], sample["line"])
+    ]
     sample.to_parquet(OUT, index=False)
     print(f"wrote {OUT}: {len(sample):,} rows across {sample['week'].nunique()} weeks")
 

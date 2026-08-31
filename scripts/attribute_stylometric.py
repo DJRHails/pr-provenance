@@ -90,12 +90,17 @@ def main():
     texts = load_texts(signed)
     words = pd.Series(texts).str.split().str.len()
     ok = words >= MIN_WORDS
-    signed, texts = signed[ok.values].reset_index(drop=True), [t for t, k in zip(texts, ok) if k]
+    signed, texts = (
+        signed[ok.values].reset_index(drop=True),
+        [t for t, k in zip(texts, ok) if k],
+    )
 
     # split by author: no account contributes to both sides
     author_hash = pd.util.hash_array(signed["author"].to_numpy(dtype=object)) % 100
     val = author_hash < 20
-    vec = TfidfVectorizer(ngram_range=(1, 2), min_df=5, max_features=200_000, sublinear_tf=True)
+    vec = TfidfVectorizer(
+        ngram_range=(1, 2), min_df=5, max_features=200_000, sublinear_tf=True
+    )
     Xtr = vec.fit_transform(pd.Series(texts)[~val])
     Xva = vec.transform(pd.Series(texts)[val])
     clf = LogisticRegression(max_iter=2000, C=1.0)

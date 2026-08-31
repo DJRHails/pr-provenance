@@ -84,14 +84,20 @@ def main():
     print(per_agent.round(3).to_markdown())
 
     print("\n### Detector vs the clustering (sample)\n")
-    tbl = sc.assign(lead=sc["lead"].map({True: "lead ('Claude') cluster", False: "other 9"})).groupby(
-        "lead"
-    ).agg(n=("iso_ai_touched", "size"), ai_touched=("iso_ai_touched", "mean"))
+    tbl = (
+        sc.assign(
+            lead=sc["lead"].map({True: "lead ('Claude') cluster", False: "other 9"})
+        )
+        .groupby("lead")
+        .agg(n=("iso_ai_touched", "size"), ai_touched=("iso_ai_touched", "mean"))
+    )
     print(tbl.round(3).to_markdown())
 
     print("\n### Unsigned rows the detector flags: closest agent style (sample)\n")
     uns = sc[~sc["signed"]].merge(
-        stylo[["day", "line", "predicted_agent", "confidence"]], on=["day", "line"], how="left"
+        stylo[["day", "line", "predicted_agent", "confidence"]],
+        on=["day", "line"],
+        how="left",
     )
     flagged = uns[uns["iso_ai_touched"] & uns["predicted_agent"].notna()]
     tbl = flagged["predicted_agent"].value_counts().to_frame("n")
@@ -101,7 +107,10 @@ def main():
     print("\nby period:")
     flagged = flagged.assign(q=quarter(flagged["week"]))
     print(
-        flagged.groupby(["q", "predicted_agent"]).size().unstack(fill_value=0).to_markdown()
+        flagged.groupby(["q", "predicted_agent"])
+        .size()
+        .unstack(fill_value=0)
+        .to_markdown()
     )
 
 

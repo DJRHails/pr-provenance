@@ -1,13 +1,21 @@
 """One figure: detector-flagged share vs signed share vs the lead cluster, weekly.
 
-    PYTHONPATH=. python scripts/fig_provenance.py   # writes figures/fig_provenance.png
+PYTHONPATH=. python scripts/fig_provenance.py   # writes figures/fig_provenance.png
 """
 
 import os
 
 import numpy as np
 import pandas as pd
-from graphs import ci_fill, finalize, footnotes, label_lines, save_chart, set_theme, subplots
+from graphs import (
+    ci_fill,
+    finalize,
+    footnotes,
+    label_lines,
+    save_chart,
+    set_theme,
+    subplots,
+)
 
 
 def wilson(k, n, z=1.96):
@@ -24,7 +32,9 @@ def main():
     agents = pd.read_parquet("labels/agents.parquet")
     scores = pd.read_parquet("labels/isogram_scores.parquet")
 
-    kept = assign.merge(agents[["day", "line", "agent"]], on=["day", "line"], how="left")
+    kept = assign.merge(
+        agents[["day", "line", "agent"]], on=["day", "line"], how="left"
+    )
     weekly = kept.groupby("week").agg(
         signed=("agent", lambda a: (a != "human_unsigned").mean()),
         lead=("lead", "mean"),

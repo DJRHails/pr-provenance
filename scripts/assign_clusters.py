@@ -23,7 +23,6 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 
-from vendor import analyze
 from vendor.analyze import (
     BOT_LOGIN,
     BOT_SUFFIX,
@@ -62,10 +61,19 @@ def scan_with_identity(path):
                 continue
             words = tokens(row["body"])
             cols.append(
-                np.fromiter((ids.setdefault(w, len(ids)) for w in words), np.int32, len(words))
+                np.fromiter(
+                    (ids.setdefault(w, len(ids)) for w in words), np.int32, len(words)
+                )
             )
-            meta.append((day, lineno, row.get("ts") or "", row.get("repo") or "",
-                         row.get("author") or ""))
+            meta.append(
+                (
+                    day,
+                    lineno,
+                    row.get("ts") or "",
+                    row.get("repo") or "",
+                    row.get("author") or "",
+                )
+            )
     return list(ids), cols, meta
 
 
@@ -79,7 +87,9 @@ def documents_with_identity(log=print):
         for (t, _), (local, c, m) in zip(
             flat, pool.imap(scan_with_identity, [f for _, f in flat], chunksize=4)
         ):
-            remap = np.fromiter((ids.setdefault(w, len(ids)) for w in local), np.int32, len(local))
+            remap = np.fromiter(
+                (ids.setdefault(w, len(ids)) for w in local), np.int32, len(local)
+            )
             cols += [remap[x] for x in c]
             meta += m
             week_raw += [t] * len(m)
@@ -91,7 +101,9 @@ def documents_with_identity(log=print):
     np.cumsum([len(c) for c in cols], out=indptr[1:])
     indices = np.concatenate(cols) if cols else np.zeros(0, np.int32)
     del cols
-    X0 = csr_matrix((np.ones(indices.size), indices, indptr), shape=(n, V), dtype=np.float64)
+    X0 = csr_matrix(
+        (np.ones(indices.size), indices, indptr), shape=(n, V), dtype=np.float64
+    )
     X0.sum_duplicates()
 
     # the three per-description filters, verbatim from upstream `documents`
@@ -136,7 +148,9 @@ def documents_with_identity(log=print):
     long_enough = np.asarray(X.sum(axis=1)).ravel() >= MIN_WORDS
     X, week_of, kd = X[long_enough], week_of[long_enough], kd[long_enough]
     kept_meta = [meta[d] for d in kd]
-    log(f"{X.shape[0]:,} descriptions, {X.sum():,.0f} appearances, {len(vocab):,} words")
+    log(
+        f"{X.shape[0]:,} descriptions, {X.sum():,.0f} appearances, {len(vocab):,} words"
+    )
     return X, week_of, weeks, vocab, kept_meta
 
 
