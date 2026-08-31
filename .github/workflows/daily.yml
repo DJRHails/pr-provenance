@@ -1,0 +1,55 @@
+# Ten search-API requests a day, committed as one immutable file under data/days/ — the same
+# collection protocol as upstream louisabraham/load-bearing (vendor/fetch_day.py, MIT), so this
+# corpus keeps growing under our own ownership after the bootstrap.
+#
+# NOTE: this repo must be registered in the taffy runner pool (modules/ci-runners/runners.conf)
+# before the schedule fires, or the job queues against a label nothing answers.
+name: daily
+
+on:
+  schedule:
+    - cron: "40 6 * * *" # a little after 06:00 UTC, so yesterday is comfortably closed
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "also fetch this many earlier missing days"
+        default: "3"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false # never interrupt a run part-way through committing
+
+jobs:
+  sample:
+    runs-on: >-
+      ${{ vars.CI_FALLBACK == 'true'
+      && 'ubuntu-latest'
+      || fromJSON('["self-hosted", "linux", "x64", "taffy"]') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: true # the commit step below pushes with this token
+
+      - name: Fetch yesterday (and backfill)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BACKFILL: ${{ inputs.backfill || '3' }}
+        run: |
+          set -euo pipefail
+          python3 vendor/fetch_day.py --backfill "$BACKFILL"
+
+      - name: Commit the day
+        run: |
+          set -euo pipefail
+          git add data/days
+          if git diff --cached --quiet; then
+            echo "nothing new"
+            exit 0
+          fi
+          git -c user.name=github-actions -c user.email=actions@github.com \
+            commit -m "corpus: $(date -u -d yesterday +%F)"
+          git push
