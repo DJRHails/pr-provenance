@@ -43,6 +43,24 @@ words — vocabulary distinctive of Claude.
 
 Join key throughout: **(`day`, `line`)** — the day file and 0-based line number in it.
 
+## Staying in sync
+
+The dataset is self-syncing at two cadences (`.github/workflows/daily.yml`):
+
+- **Daily**: fetch yesterday's ten windows into `data/days/`, refresh the per-row signature
+  labels (`labels/agents.parquet`) — append-only facts, stable across refits.
+- **Weekly** (Mondays, once the new whole week has closed): re-run the KL-k-means fit on the
+  grown corpus and rebuild the fit-dependent labels (`analysis/analysis.js`,
+  `labels/assignments.parquet`, `labels/stylometric.parquet`). A refit reassigns *every*
+  document, so these churn by design; each refresh is one commit and the git history is the
+  version history.
+- **On GPU demand**: detector labels for new weeks are appended by running isogram's
+  `scripts/score_pr_corpus.py` over the new rows on the cluster and committing the grown
+  `labels/isogram_full.parquet`; per-row scores never churn.
+
+The README's Results section is a dated snapshot (numbers as of **2026-08-31**, corpus through
+2026-08-30); regenerate its tables any time with `scripts/summarize.py`.
+
 ## Results
 
 All numbers below reproduce from `PYTHONPATH=. python scripts/summarize.py` over the committed

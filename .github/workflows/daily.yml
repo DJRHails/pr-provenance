@@ -1,19 +1,32 @@
-# Ten search-API requests a day, committed as one immutable file under data/days/ — the same
-# collection protocol as upstream louisabraham/load-bearing (vendor/fetch_day.py, MIT), so this
-# corpus keeps growing under our own ownership after the bootstrap.
+# The corpus and its labels stay in sync on their own:
+#
+# - daily (06:40 UTC): ten search-API requests append one immutable file under data/days/ and the
+#   cheap per-row labels (agent signatures) are refreshed — the same collection protocol as
+#   upstream louisabraham/load-bearing (vendor/fetch_day.py, MIT).
+# - weekly (Mondays 07:10 UTC, once the new whole week has closed): the KL-k-means fit re-runs on
+#   the grown corpus and the fit-dependent labels (analysis.js, assignments, stylometric) are
+#   rebuilt. These CHURN by design — a refit reassigns every document — so each refresh is one
+#   commit and the git history is the version history. Per-row facts (agents, isogram scores)
+#   are stable across refits; detector labels for new weeks are appended from the GPU cluster
+#   (see README), not from CI.
 #
 # NOTE: this repo must be registered in the taffy runner pool (modules/ci-runners/runners.conf)
-# before the schedule fires, or the job queues against a label nothing answers.
+# before the schedules fire, or jobs queue against a label nothing answers.
 name: daily
 
 on:
   schedule:
-    - cron: "40 6 * * *" # a little after 06:00 UTC, so yesterday is comfortably closed
+    - cron: "40 6 * * *" # daily fetch — a little after 06:00 UTC, so yesterday is closed
+    - cron: "10 7 * * 1" # weekly label refresh — Monday, after the fetch closed the week
   workflow_dispatch:
     inputs:
       backfill:
         description: "also fetch this many earlier missing days"
         default: "3"
+      refresh_labels:
+        description: "also re-run the weekly label refresh"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -32,7 +45,9 @@ jobs:
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
-          persist-credentials: true # the commit step below pushes with this token
+          persist-credentials: true # the commit steps below push with this token
+
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Fetch yesterday (and backfill)
         env:
@@ -42,14 +57,37 @@ jobs:
           set -euo pipefail
           python3 vendor/fetch_day.py --backfill "$BACKFILL"
 
-      - name: Commit the day
+      - name: Refresh per-row labels (agent signatures)
         run: |
           set -euo pipefail
-          git add data/days
+          uv venv .venv && uv pip install -p .venv --quiet pandas pyarrow
+          PYTHONPATH=. .venv/bin/python scripts/attribute_agents.py
+
+      - name: Commit the day + agent labels
+        run: |
+          set -euo pipefail
+          git add data/days labels/agents.parquet
           if git diff --cached --quiet; then
             echo "nothing new"
             exit 0
           fi
           git -c user.name=github-actions -c user.email=actions@github.com \
             commit -m "corpus: $(date -u -d yesterday +%F)"
+          git push
+
+      - name: Weekly label refresh (fit-dependent labels)
+        if: github.event.schedule == '10 7 * * 1' || inputs.refresh_labels == true
+        run: |
+          set -euo pipefail
+          uv pip install -p .venv --quiet numpy scipy numba scikit-learn
+          .venv/bin/python vendor/analyze.py -o analysis/analysis.js
+          PYTHONPATH=. .venv/bin/python scripts/assign_clusters.py
+          PYTHONPATH=. .venv/bin/python scripts/attribute_stylometric.py
+          git add analysis/analysis.js labels/assignments.parquet labels/stylometric.parquet
+          if git diff --cached --quiet; then
+            echo "labels unchanged"
+            exit 0
+          fi
+          git -c user.name=github-actions -c user.email=actions@github.com \
+            commit -m "labels: weekly refit through $(date -u -d 'last sunday' +%F)"
           git push

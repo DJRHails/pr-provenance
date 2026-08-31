@@ -4,3 +4,4 @@ __pycache__/
 .data/
 .claude/settings.local.json
 .agents/settings.local.json
+labels/embed_input.parquet
