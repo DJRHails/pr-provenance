@@ -83,7 +83,8 @@ jobs:
           .venv/bin/python vendor/analyze.py -o analysis/analysis.js
           PYTHONPATH=. .venv/bin/python scripts/assign_clusters.py
           PYTHONPATH=. .venv/bin/python scripts/attribute_stylometric.py
-          git add analysis/analysis.js labels/assignments.parquet labels/stylometric.parquet
+          PYTHONPATH=. .venv/bin/python scripts/build_web_data.py
+          git add analysis/analysis.js labels/assignments.parquet labels/stylometric.parquet docs/
           if git diff --cached --quiet; then
             echo "labels unchanged"
             exit 0
