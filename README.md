@@ -37,7 +37,8 @@ words — vocabulary distinctive of Claude.
 | `labels/assignments.parquet` | per kept document (`day`, `line` → `week`, `component` 0–9 in the published order, `lead`) |
 | `labels/agents.parquet` | per raw document: signing `agent`, `model_raw`/`model` where named, `bot_author`, review-bot mentions |
 | `labels/stylometric.parquet` | unsigned kept documents: predicted agent + confidence (bag-of-words over prose with signatures and URLs stripped) |
-| `labels/isogram_sample.parquet` / `labels/isogram_scores.parquet` | stratified 250/week sample (21,500 docs) and its detector verdicts |
+| `labels/isogram_full.parquet` | detector verdicts for **every** kept document (467,387 rows: `iso_label`, `iso_ai_touched`, `iso_score`, `iso_ai_prob`, …) |
+| `labels/isogram_sample.parquet` / `labels/isogram_scores.parquet` | stratified 250/week sample (21,500 docs) and its verdicts — the figure's CI-bearing estimate |
 | `scripts/` | everything above is one script each; all run from a clean checkout (`PYTHONPATH=. python scripts/<x>.py`) |
 
 Join key throughout: **(`day`, `line`)** — the day file and 0-based line number in it.
@@ -79,31 +80,34 @@ fit found really are agent styles, recoverable from prose alone.
 
 ### isogram: human vs non-human
 
-The stratified sample (250 docs/week, n=21,500) scored with the shipped isogram text detector
-(Qwen3.5-9B QLoRA, EditLens-style regression + binary head, val-fit threshold):
+**Every kept document is scored** (`labels/isogram_full.parquet`, 4×H200 for ~85 min) with the
+shipped isogram text detector (Qwen3.5-9B QLoRA, EditLens-style regression + binary head,
+val-fit threshold); the stratified 250/week sample was scored first and agrees with the census
+within ≤1.1pp in every quarter. Full-corpus numbers:
 
 | | n | flagged AI |
 |---|---|---|
-| signed by any agent | 4,494 | **94.1%** |
-| — Claude Code | 2,229 | 99.2% |
-| — Codex | 1,847 | 89.7% |
-| — Jules | 281 | 98.2% |
-| — Cursor | 88 | 44.3% |
-| unsigned | 17,006 | 46.0% |
-| unsigned, in the lead cluster | 859 | 89.5% |
-| unsigned, other clusters | 16,147 | 43.6% |
+| signed by any agent | 97,995 | **94.4%** |
+| — Claude Code | 49,507 | 98.8% |
+| — Codex | 39,469 | 90.6% |
+| — Jules | 6,024 | 98.0% |
+| — Cursor | 1,915 | 45.0% |
+| — Devin | 284 | 96.8% |
+| unsigned | 369,392 | 46.9% |
+| unsigned, in the lead cluster | 20,387 | 91.4% |
+| unsigned, other clusters | 349,005 | 44.3% |
 
-The signatures validate the detector in the wild (it never saw PR text in training): 99.2% of
+The signatures validate the detector in the wild (it never saw PR text in training): 98.8% of
 Claude-Code-signed descriptions are flagged. The Cursor exception is informative — Cursor-agent
 PR bodies often carry the human's own task prompt inside the agent's wrapper, and the detector
 reads them as human (mean score 0.05).
 
-**The weekly AI-touched share rises 23.4% (2025-Q1) → 90.2% (2026-Q3).** The 2025-Q1 level is
+**The AI-touched share rises 22.8% (2025-Q1) → 89.4% (2026-Q3).** The 2025-Q1 level is
 the honest baseline uncertainty: some is pre-agent LLM copy-paste, some is false positives on
 an out-of-distribution register (templated, checklist-heavy, non-English PR prose). The
 *trend* — +67pp while signatures explain only +33pp — is the finding: **the detector sees
 roughly one unsigned AI description for every signed one.** Unsigned-only flag rates:
-23.3% → 87.6% by quarter.
+22.7% → 86.5% by quarter.
 
 ### The unsigned AI: mostly Claude-styled
 
