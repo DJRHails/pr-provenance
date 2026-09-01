@@ -67,6 +67,10 @@ def x_of(i, n, x0=PAD_L, x1=W - PAD_R):
 
 
 def stack_svg(tbl: pd.DataFrame) -> tuple[str, dict]:
+    # gap weeks (never collected — the 2021-2024 coarse-to-fine backfill) carry no share;
+    # this board drops them and compresses time. The canonical board at
+    # isogram.hails.info/github plots real time; this one stays simple.
+    tbl = tbl[tbl.sum(axis=1) > 0]
     weeks = list(tbl.index)
     n = len(weeks)
     shares = tbl.div(tbl.sum(axis=1), axis=0)

@@ -43,17 +43,52 @@ def main():
         )
     ]
 
-    tbl = weekly_bands()
+    # full contiguous week grid from the fit — a week never collected stays as an EMPTY week
+    # (all-zero row), so the charts show a gap instead of quietly closing time up
+    tbl = weekly_bands().reindex(analysis["weeks"], fill_value=0)
     versions = version_counts()
     attribution = pd.read_parquet("labels/embedding_attribution.parquet")
     fam = attribution["family_pred"].value_counts(normalize=True).round(3).to_dict()
+
+    # split the unsigned-flagged band by the calibrated embedding family posteriors: the mean
+    # posterior mass over that week's attributed sample apportions the week's flagged count.
+    # Weeks with no attributed sample (the 2021-2024 history; agent house styles do not exist
+    # there anyway) keep their whole mass as "unattributed".
+    post = attribution.groupby("week")[["p_claude_code", "p_codex", "p_jules"]].mean()
+    split_cols = {"uns_claude": [], "uns_codex": [], "uns_jules": [], "uns_unattributed": []}
+    for week, total in tbl["unsigned_ai"].items():
+        if week in post.index and total > 0:
+            pc, px, pj = post.loc[week]
+            c, x, j = round(total * pc), round(total * px), round(total * pj)
+            split_cols["uns_claude"].append(c)
+            split_cols["uns_codex"].append(x)
+            split_cols["uns_jules"].append(j)
+            split_cols["uns_unattributed"].append(int(total) - c - x - j)
+        else:
+            for k in ("uns_claude", "uns_codex", "uns_jules"):
+                split_cols[k].append(0)
+            split_cols["uns_unattributed"].append(int(total))
+    tbl = tbl.assign(**split_cols).drop(columns=["unsigned_ai"])
+
+    band_order = [
+        ("human", "Human (unflagged)"),
+        ("uns_unattributed", "Unsigned, flagged — unattributed"),
+        ("uns_jules", "Unsigned, flagged — Jules-style"),
+        ("uns_codex", "Unsigned, flagged — Codex-style"),
+        ("uns_claude", "Unsigned, flagged — Claude-style"),
+        ("other_agents", "Other agents (signed)"),
+        ("jules", "Jules (signed)"),
+        ("codex", "Codex (signed)"),
+        ("claude_code", "Claude Code (signed)"),
+    ]
+    tbl = tbl[[k for k, _ in band_order]]
 
     recent = tbl.tail(4).sum()
     total_recent = recent.sum()
     payload = {
         "updated": str(tbl.index[-1]),
         "weeks": [str(w) for w in tbl.index],
-        "bands": [{"key": k, "label": label} for k, label, _ in BANDS],
+        "bands": [{"key": k, "label": label} for k, label in band_order],
         "stack": tbl.astype(int).to_numpy().tolist(),
         "words_per_week": analysis["words_per_week"],
         "lead_share": {
