@@ -25,6 +25,7 @@ import subprocess
 import sys
 from datetime import date, timedelta
 
+from scripts.redact import redact_file
 from vendor.fetch_day import fetch, path
 
 FIRST_MONDAY = date(2021, 1, 4)  # anchor-aligned: (2024-12-30 − this) is a multiple of 7
@@ -79,7 +80,10 @@ def fetch_days(days: list[date], token: str) -> int:
             failed += 1
             print(f"{day}  failed (continuing)", flush=True)
         else:
-            print(f"{day}  {n} descriptions", flush=True)
+            # credential-shaped strings never reach a commit (GitHub push protection
+            # rejects them, and republishing them would be wrong anyway) — scripts/redact.py
+            r = redact_file(path(day))
+            print(f"{day}  {n} descriptions" + (f", {r} redactions" if r else ""), flush=True)
     return failed
 
 

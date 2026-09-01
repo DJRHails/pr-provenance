@@ -61,6 +61,8 @@ jobs:
         run: |
           set -euo pipefail
           uv venv .venv && uv pip install -p .venv --quiet pandas pyarrow
+          git status --porcelain data/days | awk '$1 == "??" || $1 == "M" {print $2}' \
+            | xargs -r .venv/bin/python scripts/redact.py
           PYTHONPATH=. .venv/bin/python scripts/attribute_agents.py
 
       - name: Commit the day + agent labels
