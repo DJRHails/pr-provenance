@@ -127,12 +127,19 @@ Claude-Code-signed descriptions are flagged. The Cursor exception is informative
 PR bodies often carry the human's own task prompt inside the agent's wrapper, and the detector
 reads them as human (mean score 0.05).
 
-**The AI-touched share rises 22.8% (2025-Q1) → 89.4% (2026-Q3).** The 2025-Q1 level is
-the honest baseline uncertainty: some is pre-agent LLM copy-paste, some is false positives on
-an out-of-distribution register (templated, checklist-heavy, non-English PR prose). The
-*trend* — +67pp while signatures explain only +33pp — is the finding: **the detector sees
-roughly one unsigned AI description for every signed one.** Unsigned-only flag rates:
-22.7% → 86.5% by quarter.
+**The AI-touched share rises 22.8% (2025-Q1) → 89.4% (2026-Q3), against a measured
+false-positive floor of 11.75%.** The corpus now extends back to 2021 (coarse-to-fine
+backfill: whole weeks at half-yearly, then quarterly, then monthly, then full weekly
+resolution), and the pre-agent history turns the old baseline ambiguity into a measurement:
+across 2021–2022 (census, n=99,950, signatures 0.00%) the detector flags **11.75%
+[11.55, 11.95]** — flat for 24 sampled weeks (range 10.5–12.6%, mean score pinned at 0.033).
+That is the instrument's FP rate on this register at the deployed threshold — an upper bound,
+since any true AI text in 2021–22 counts against it. On top of that floor: a modest
+ChatGPT-era lift from May 2023 (~+3–4pp, half-year means 12.7% → 15.7%), a plateau through
+2024-H1, and a sharp takeoff pinned to the **week of 2024-10-21** (16.0% → 21.5% → 24.2% by
+early November, mean scores jumping 0.037 → 0.046) — the start of the agentic-coding wave,
+running unbroken to 89% by 2026-Q3. The *trend* remains the finding: +67pp over 2025–26 while
+signatures explain only +33pp — **roughly one unsigned AI description for every signed one.**
 
 ### The unsigned AI: mostly Claude-styled
 
