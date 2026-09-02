@@ -35,6 +35,7 @@ from vendor.analyze import (
     fit,
     nearest,
     pack,
+    summed,
     tokens,
     week_files,
 )
@@ -181,6 +182,18 @@ def main():
         )
 
     labels, _ = nearest(X.data, X.indices, X.indptr, np.ascontiguousarray(np.log(W).T))
+
+    # Rebuild the aggregates from THESE labels (fit's internal assignment can differ by a
+    # boundary document — the same FMA rounding upstream documents on `nearest`), then pack:
+    # page data and per-doc labels share one assignment by construction.
+    import numba
+
+    k = W.shape[0]
+    n_d = np.asarray(X.sum(axis=1)).ravel()
+    idx = week_of * k + labels
+    C = np.bincount(idx, minlength=len(weeks) * k).reshape(len(weeks), k).astype(float)
+    A = np.bincount(idx, weights=n_d, minlength=len(weeks) * k).reshape(len(weeks), k)
+    M = summed(X.data, X.indices, X.indptr, labels, k, X.shape[1], numba.get_num_threads())
 
     # regenerate analysis.js from THIS fit (same pack as upstream), so page and labels agree
     packed = pack(
