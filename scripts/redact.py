@@ -64,6 +64,10 @@ _PATTERNS = [
         re.compile(r"-----BEGIN [A-Z ]{0,20}PRIVATE KEY( BLOCK)?-----"),
     ),
     (
+        "octopus-key",
+        re.compile(r"\bAPI-[A-Z0-9]{25,40}\b"),
+    ),
+    (
         "twilio-sid",
         # account/API-key string identifiers (AC/SK + 32 hex)
         re.compile(r"\b(?:AC|SK)[0-9a-fA-F]{32}\b"),
@@ -100,13 +104,57 @@ def redact_text(text: str) -> tuple[str, int]:
     return text, hits
 
 
+def gitleaks_secrets(path: str) -> list[str]:
+    """Secret strings gitleaks finds in one file — a far wider net than the patterns above
+    (~GitHub push-protection coverage). Empty when gitleaks is not installed (the regex layer
+    still applies; CI relies on it until the runner carries gitleaks)."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    if not shutil.which("gitleaks"):
+        return []
+    with tempfile.NamedTemporaryFile(suffix=".json") as report:
+        subprocess.run(
+            [
+                "gitleaks",
+                "dir",
+                path,
+                "--no-banner",
+                "--exit-code",
+                "0",
+                "--report-format",
+                "json",
+                "--report-path",
+                report.name,
+            ],
+            capture_output=True,
+            check=True,
+        )
+        try:
+            findings = json.load(open(report.name))
+        except (json.JSONDecodeError, FileNotFoundError):
+            return []
+    return sorted(
+        {f["Secret"] for f in findings if f.get("Secret") and len(f["Secret"]) >= 8},
+        key=len,
+        reverse=True,
+    )
+
+
 def redact_file(path: str) -> int:
     """Redact one day file in place; returns the number of redactions."""
+    leaked = gitleaks_secrets(path)
     out, hits = [], 0
     with open(path, encoding="utf-8") as fh:
         for line in fh:
             row = json.loads(line)
-            row["body"], n = redact_text(row.get("body") or "")
+            body, n = redact_text(row.get("body") or "")
+            for secret in leaked:
+                if secret in body:
+                    body = body.replace(secret, "[REDACTED:gitleaks]")
+                    n += 1
+            row["body"] = body
             hits += n
             out.append(json.dumps(row, ensure_ascii=False) + "\n")
     if hits:
