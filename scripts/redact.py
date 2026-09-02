@@ -90,6 +90,11 @@ _PATTERNS = [
         re.compile(r"\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b"),
     ),
     (
+        "vault-token",
+        # service (hvs.) and batch (hvb.) tokens
+        re.compile(r"\bhv[sb]\.[A-Za-z0-9_-]{24,200}\b"),
+    ),
+    (
         "jwt",
         re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
     ),
