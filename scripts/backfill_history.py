@@ -67,6 +67,24 @@ def commit_push(message: str) -> None:
     if subprocess.run(["git", "diff", "--cached", "--quiet"]).returncode == 0:
         return
     subprocess.run(["git", "commit", "-q", "-m", message], check=True)
+    if subprocess.run(["git", "push", "-q", "origin", "main"]).returncode == 0:
+        return
+    # A rejected push is nearly always GitHub push protection catching a leaked credential in a
+    # PR body that the patterns hadn't covered yet, or a ref race with another writer. Re-redact
+    # this commit's files with the current patterns, amend, rebase, and retry once; if it still
+    # fails, die loudly so the shepherd sees the new secret shape.
+    files = subprocess.run(
+        ["git", "show", "--name-only", "--format=", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    for f in files:
+        if f.startswith("data/days/") and os.path.exists(f):
+            redact_file(f)
+    subprocess.run(["git", "add", "data/days"], check=True)
+    subprocess.run(["git", "commit", "-q", "--amend", "--no-edit"], check=True)
+    subprocess.run(["git", "pull", "-q", "--rebase", "origin", "main"], check=True)
     subprocess.run(["git", "push", "-q", "origin", "main"], check=True)
 
 

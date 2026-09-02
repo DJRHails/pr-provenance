@@ -64,6 +64,23 @@ _PATTERNS = [
         re.compile(r"-----BEGIN [A-Z ]{0,20}PRIVATE KEY( BLOCK)?-----"),
     ),
     (
+        "postman-key",
+        # PMAK = API key, PMAT = collection access key
+        re.compile(r"\bPMA[KT]-[0-9A-Za-z-]{20,64}\b"),
+    ),
+    (
+        "npm-token",
+        re.compile(r"\bnpm_[A-Za-z0-9]{36}\b"),
+    ),
+    (
+        "gitlab-pat",
+        re.compile(r"\bglpat-[0-9A-Za-z_-]{20,50}\b"),
+    ),
+    (
+        "sendgrid-key",
+        re.compile(r"\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b"),
+    ),
+    (
         "jwt",
         re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
     ),
