@@ -64,6 +64,11 @@ _PATTERNS = [
         re.compile(r"-----BEGIN [A-Z ]{0,20}PRIVATE KEY( BLOCK)?-----"),
     ),
     (
+        "twilio-sid",
+        # account/API-key string identifiers (AC/SK + 32 hex)
+        re.compile(r"\b(?:AC|SK)[0-9a-fA-F]{32}\b"),
+    ),
+    (
         "postman-key",
         # PMAK = API key, PMAT = collection access key
         re.compile(r"\bPMA[KT]-[0-9A-Za-z-]{20,64}\b"),
