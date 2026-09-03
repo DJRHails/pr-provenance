@@ -27,8 +27,10 @@ words — vocabulary distinctive of Claude.
   reproduces the published `analysis.js` **byte-identically** (467,387 documents, 52,506,137
   word appearances, cost 129,872,592.4, seed 3, arrival confirmed).
 - `scripts/assign_clusters.py` re-runs the published fit and exports what the page never shows —
-  the cluster of every kept document — asserting exactness at every seam: document count,
-  appearance count, fit cost under the published seed, and every component's weekly count series.
+  the cluster of every kept document. Corpus identity is asserted (document/appearance counts,
+  week grid) and `analysis.js` is regenerated from the same fit, so the labels reproduce every
+  weekly curve by construction. (The original 2025-only bootstrap reproduced upstream's
+  published analysis.js byte-identically before the corpus was extended.)
 - `verification/refetch_2026-08-30.jsonl` is our **independent re-collection** of a day already
   in the corpus (the sampling windows are seeded on the date): 998/1000 rows overlap with
   upstream's file, 997/998 bodies byte-identical (the deltas are PRs edited or deleted since).
@@ -37,13 +39,13 @@ words — vocabulary distinctive of Claude.
 
 | path | what it is |
 |---|---|
-| `data/days/YYYY-MM-DD.jsonl` | the corpus: ~1,000 PR descriptions/day (`ts`, `repo`, `author`, `body`), 2025-01-01 →, immutable files. Through 2026-08-30 bootstrapped from upstream; grown daily by `.github/workflows/daily.yml` after that. |
+| `data/days/YYYY-MM-DD.jsonl` | the corpus: ~1,000 PR descriptions/day (`ts`, `repo`, `author`, `body`), **2021-01-01 →** (every whole week), immutable files. 2025+ bootstrapped from upstream; 2021-2024 collected by `scripts/backfill_history.py` with the same date-seeded protocol (credential-shaped strings redacted — `scripts/redact.py`); grown daily by `.github/workflows/daily.yml`. |
 | `vendor/` | upstream `fetch_day.py` + `analyze.py`, unmodified (MIT, `LICENSE.upstream`, commit in `UPSTREAM_COMMIT`) |
 | `analysis/analysis.js` | our re-run of the upstream fit (byte-identical to the published one) |
 | `labels/assignments.parquet` | per kept document (`day`, `line` → `week`, `component` 0–9 in the published order, `lead`) |
 | `labels/agents.parquet` | per raw document: signing `agent`, `model_raw`/`model` where named, `bot_author`, review-bot mentions |
 | `labels/stylometric.parquet` | unsigned kept documents: predicted agent + confidence (bag-of-words over prose with signatures and URLs stripped) |
-| `labels/isogram_full.parquet` | detector verdicts for **every** kept document (467,387 rows: `iso_label`, `iso_ai_touched`, `iso_score`, `iso_ai_prob`, …) |
+| `labels/isogram_full.parquet` | detector verdicts for **every** kept document (1,423,475 rows: `iso_label`, `iso_ai_touched`, `iso_score`, `iso_ai_prob`, …) |
 | `labels/isogram_sample.parquet` / `labels/isogram_scores.parquet` | stratified 250/week sample (21,500 docs) and its verdicts — the figure's CI-bearing estimate |
 | `labels/embedding_attribution.parquet` | unsigned detector-flagged rows: calibrated family posteriors from the detector's own embedding (`family_pred`, `family_conf`, per-class `p_*`) |
 | `scripts/` | everything above is one script each; all run from a clean checkout (`PYTHONPATH=. python scripts/<x>.py`) |
