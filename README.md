@@ -65,8 +65,7 @@ The dataset is self-syncing at two cadences (`.github/workflows/daily.yml`):
   `scripts/score_pr_corpus.py` over the new rows on the cluster and committing the grown
   `labels/isogram_full.parquet`; per-row scores never churn.
 
-The README's Results section is a dated snapshot (numbers as of **2026-08-31**, corpus through
-2026-08-30); regenerate its tables any time with `scripts/summarize.py`.
+The README's Results section is a dated snapshot (numbers as of **2026-09-03**, corpus complete over every whole week 2021-01-04 → present); regenerate its tables any time with `scripts/summarize.py`.
 
 ## Results
 
@@ -131,8 +130,7 @@ reads them as human (mean score 0.05).
 false-positive floor of 11.75%.** The corpus now extends back to 2021 (coarse-to-fine
 backfill: whole weeks at half-yearly, then quarterly, then monthly, then full weekly
 resolution), and the pre-agent history turns the old baseline ambiguity into a measurement:
-across 2021–2022 (census, n=99,950, signatures 0.00%) the detector flags **11.75%
-[11.55, 11.95]** — flat for 24 sampled weeks (range 10.5–12.6%, mean score pinned at 0.033).
+across 2021–2022 (full weekly census, n=436,054, signatures 0.00%) the detector flags **11.86%** — flat for 24 sampled weeks (range 10.5–12.6%, mean score pinned at 0.033).
 That is the instrument's FP rate on this register at the deployed threshold — an upper bound,
 since any true AI text in 2021–22 counts against it. On top of that floor: a modest
 ChatGPT-era lift from May 2023 (~+3–4pp, half-year means 12.7% → 15.7%), a plateau through
