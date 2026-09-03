@@ -30,18 +30,8 @@ def main():
 
     analysis = load_analysis()
     lead = next(c for c in analysis["components"] if c["lead"])
-    n = args.top_words
-    words = [
-        {
-            "w": w,
-            "lift": lift,
-            "total": int(sum(series)),
-            "series": [int(v) for v in series],
-        }
-        for w, lift, series in zip(
-            lead["word_list"][:n], lead["word_lift"][:n], lead["series"][:n]
-        )
-    ]
+    fam_vocab = json.load(open("labels/family_vocab.json", encoding="utf-8"))
+    families = {f: ws[: args.top_words] for f, ws in fam_vocab["families"].items()}
 
     # full contiguous week grid from the fit — a week never collected stays as an EMPTY week
     # (all-zero row), so the charts show a gap instead of quietly closing time up
@@ -70,16 +60,18 @@ def main():
             split_cols["uns_unattributed"].append(int(total))
     tbl = tbl.assign(**split_cols).drop(columns=["unsigned_ai"])
 
+    # grouped by model family: each family's predicted (hatched) band sits directly under its
+    # signed band in the same hue
     band_order = [
         ("human", "Human (unflagged)"),
-        ("uns_unattributed", "Unsigned, flagged — unattributed"),
-        ("uns_jules", "Unsigned, flagged — Jules-style"),
-        ("uns_codex", "Unsigned, flagged — Codex-style"),
-        ("uns_claude", "Unsigned, flagged — Claude-style"),
-        ("other_agents", "Other agents (signed)"),
-        ("jules", "Jules (signed)"),
-        ("codex", "Codex (signed)"),
-        ("claude_code", "Claude Code (signed)"),
+        ("uns_unattributed", "Flagged, unattributed"),
+        ("uns_jules", "Gemini (Jules) — predicted"),
+        ("jules", "Gemini (Jules) — signed"),
+        ("uns_codex", "GPT (Codex) — predicted"),
+        ("codex", "GPT (Codex) — signed"),
+        ("other_agents", "Other agents — signed"),
+        ("uns_claude", "Claude — predicted"),
+        ("claude_code", "Claude — signed"),
     ]
     tbl = tbl[[k for k, _ in band_order]]
 
@@ -95,7 +87,7 @@ def main():
             "start": lead["start_share"],
             "end": lead["end_share"],
         },
-        "words": words,
+        "families": families,
         "versions": [
             {"model": m, "week": str(w), "n": int(c)}
             for m, w, c in versions[["model", "week", "n"]].itertuples(index=False)
@@ -120,7 +112,8 @@ def main():
     }
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, separators=(",", ":"))
-    print(f"wrote {args.out}: {len(words)} words, {len(tbl)} weeks")
+    print(f"wrote {args.out}: {sum(len(w) for w in families.values())} family words, "
+          f"{len(tbl)} weeks")
 
 
 if __name__ == "__main__":
